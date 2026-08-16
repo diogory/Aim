@@ -1,0 +1,723 @@
+local Players=game:GetService("Players")
+local UIS=game:GetService("UserInputService")
+local RunService=game:GetService("RunService")
+local Lighting=game:GetService("Lighting")
+local Workspace=game:GetService("Workspace")
+
+local LP=Players.LocalPlayer
+local PG=LP:WaitForChild("PlayerGui")
+
+local AIM=true
+local HITBOX=true
+local FIXLAG=false
+local QUALITY="MEDIUM"
+
+local AIM_RANGE=500
+local MAX_HITBOX=300
+local AIM_SMOOTH=1
+
+local Target=nil
+
+local GUI=Instance.new("ScreenGui")
+GUI.Name="DSystem"
+GUI.ResetOnSpawn=false
+GUI.IgnoreGuiInset=true
+GUI.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
+GUI.Parent=PG
+
+local D=Instance.new("TextButton")
+D.Size=UDim2.fromOffset(32,32)
+D.Position=UDim2.new(.5,-16,.68,0)
+D.BackgroundColor3=Color3.fromRGB(5,5,5)
+D.TextColor3=Color3.new(1,1,1)
+D.Text="D"
+D.TextSize=17
+D.Font=Enum.Font.GothamBold
+D.Parent=GUI
+
+local dc=Instance.new("UICorner")
+dc.CornerRadius=UDim.new(0,7)
+dc.Parent=D
+
+local Menu=Instance.new("Frame")
+Menu.Size=UDim2.fromOffset(300,150)
+Menu.Position=UDim2.new(.5,-150,.68,38)
+Menu.BackgroundColor3=Color3.fromRGB(3,3,3)
+Menu.BorderSizePixel=0
+Menu.Visible=false
+Menu.Parent=GUI
+
+local mc=Instance.new("UICorner")
+mc.CornerRadius=UDim.new(0,8)
+mc.Parent=Menu
+
+local ms=Instance.new("UIStroke")
+ms.Color=Color3.fromRGB(55,55,55)
+ms.Parent=Menu
+
+local function Button(name,x,y,w,h,text)
+	local b=Instance.new("TextButton")
+	b.Name=name
+	b.Size=UDim2.fromOffset(w,h)
+	b.Position=UDim2.fromOffset(x,y)
+	b.BackgroundColor3=Color3.fromRGB(18,18,18)
+	b.TextColor3=Color3.new(1,1,1)
+	b.Text=text
+	b.TextSize=10
+	b.Font=Enum.Font.GothamBold
+	b.Parent=Menu
+
+	local c=Instance.new("UICorner")
+	c.CornerRadius=UDim.new(0,6)
+	c.Parent=b
+
+	return b
+end
+
+local AimBtn=Button("Aim",5,8,70,38,"AIM\nON")
+local HitBtn=Button("Hitbox",80,8,70,38,"HITBOX\nON")
+local MedBtn=Button("Medium",155,8,67,38,"MEDIUM\n30%")
+local HighBtn=Button("High",227,8,67,38,"HIGH\n50%")
+local MaxBtn=Button("Max",155,52,67,38,"MAX\n70%")
+local LagBtn=Button("FixLag",227,52,67,38,"FIX LAG\nOFF")
+
+local QualityLabel=Instance.new("TextLabel")
+QualityLabel.Size=UDim2.fromOffset(145,24)
+QualityLabel.Position=UDim2.fromOffset(5,99)
+QualityLabel.BackgroundTransparency=1
+QualityLabel.Text="GRAPHICS: MEDIUM"
+QualityLabel.TextColor3=Color3.fromRGB(190,190,190)
+QualityLabel.TextSize=9
+QualityLabel.Font=Enum.Font.GothamBold
+QualityLabel.Parent=Menu
+
+local TargetBox=Instance.new("Frame")
+TargetBox.Size=UDim2.fromOffset(170,36)
+TargetBox.Position=UDim2.new(.5,-85,0,12)
+TargetBox.BackgroundColor3=Color3.fromRGB(5,5,5)
+TargetBox.BorderSizePixel=0
+TargetBox.Active=true
+TargetBox.Parent=GUI
+
+local tbc=Instance.new("UICorner")
+tbc.CornerRadius=UDim.new(0,7)
+tbc.Parent=TargetBox
+
+local tbs=Instance.new("UIStroke")
+tbs.Color=Color3.fromRGB(55,55,55)
+tbs.Parent=TargetBox
+
+local TargetText=Instance.new("TextLabel")
+TargetText.Size=UDim2.fromScale(1,1)
+TargetText.BackgroundTransparency=1
+TargetText.Text="TARGET: NONE | 0 STUDS"
+TargetText.TextColor3=Color3.new(1,1,1)
+TargetText.TextStrokeTransparency=.25
+TargetText.TextSize=10
+TargetText.Font=Enum.Font.GothamBold
+TargetText.Parent=TargetBox
+
+local function UpdateUI()
+	AimBtn.Text=AIM and "AIM\nON" or "AIM\nOFF"
+	HitBtn.Text=HITBOX and "HITBOX\nON" or "HITBOX\nOFF"
+	LagBtn.Text=FIXLAG and "FIX LAG\nON" or "FIX LAG\nOFF"
+
+	AimBtn.BackgroundColor3=AIM
+		and Color3.fromRGB(35,35,35)
+		or Color3.fromRGB(18,18,18)
+
+	HitBtn.BackgroundColor3=HITBOX
+		and Color3.fromRGB(35,35,35)
+		or Color3.fromRGB(18,18,18)
+
+	LagBtn.BackgroundColor3=FIXLAG
+		and Color3.fromRGB(35,35,35)
+		or Color3.fromRGB(18,18,18)
+
+	MedBtn.BackgroundColor3=QUALITY=="MEDIUM"
+		and Color3.fromRGB(45,45,45)
+		or Color3.fromRGB(18,18,18)
+
+	HighBtn.BackgroundColor3=QUALITY=="HIGH"
+		and Color3.fromRGB(45,45,45)
+		or Color3.fromRGB(18,18,18)
+
+	MaxBtn.BackgroundColor3=QUALITY=="MAX"
+		and Color3.fromRGB(45,45,45)
+		or Color3.fromRGB(18,18,18)
+
+	QualityLabel.Text="GRAPHICS: "..QUALITY
+end
+
+D.Activated:Connect(function()
+	Menu.Visible=not Menu.Visible
+end)
+
+AimBtn.Activated:Connect(function()
+	AIM=not AIM
+	if not AIM then Target=nil end
+	UpdateUI()
+end)
+
+HitBtn.Activated:Connect(function()
+	HITBOX=not HITBOX
+	UpdateUI()
+end)
+
+local dragD=false
+local dStart
+local dPos
+local dInput
+
+D.InputBegan:Connect(function(input)
+	if input.UserInputType==Enum.UserInputType.Touch
+	or input.UserInputType==Enum.UserInputType.MouseButton1 then
+		dragD=true
+		dStart=input.Position
+		dPos=D.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState==Enum.UserInputState.End then
+				dragD=false
+			end
+		end)
+	end
+end)
+
+D.InputChanged:Connect(function(input)
+	if input.UserInputType==Enum.UserInputType.Touch
+	or input.UserInputType==Enum.UserInputType.MouseMovement then
+		dInput=input
+	end
+end)
+
+UIS.InputChanged:Connect(function(input)
+	if not dragD or input~=dInput then return end
+
+	local delta=input.Position-dStart
+
+	D.Position=UDim2.new(
+		dPos.X.Scale,
+		dPos.X.Offset+delta.X,
+		dPos.Y.Scale,
+		dPos.Y.Offset+delta.Y
+	)
+
+	Menu.Position=UDim2.new(
+		D.Position.X.Scale,
+		D.Position.X.Offset-149,
+		D.Position.Y.Scale,
+		D.Position.Y.Offset+38
+	)
+end)
+
+local dragTarget=false
+local targetStart
+local targetPos
+local targetInput
+
+TargetBox.InputBegan:Connect(function(input)
+	if input.UserInputType==Enum.UserInputType.Touch
+	or input.UserInputType==Enum.UserInputType.MouseButton1 then
+		dragTarget=true
+		targetStart=input.Position
+		targetPos=TargetBox.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState==Enum.UserInputState.End then
+				dragTarget=false
+			end
+		end)
+	end
+end)
+
+TargetBox.InputChanged:Connect(function(input)
+	if input.UserInputType==Enum.UserInputType.Touch
+	or input.UserInputType==Enum.UserInputType.MouseMovement then
+		targetInput=input
+	end
+end)
+
+UIS.InputChanged:Connect(function(input)
+	if not dragTarget or input~=targetInput then return end
+
+	local delta=input.Position-targetStart
+
+	TargetBox.Position=UDim2.new(
+		targetPos.X.Scale,
+		targetPos.X.Offset+delta.X,
+		targetPos.Y.Scale,
+		targetPos.Y.Offset+delta.Y
+	)
+end)
+
+local Saved={
+	parts={},
+	particles={},
+	trails={},
+	beams={},
+	smoke={},
+	fire={},
+	effects={}
+}
+
+local LightSaved=nil
+local Switching=false
+
+local function SaveLighting()
+	if LightSaved then return end
+
+	LightSaved={
+		shadow=Lighting.GlobalShadows,
+		diffuse=Lighting.EnvironmentDiffuseScale,
+		specular=Lighting.EnvironmentSpecularScale
+	}
+end
+
+local function SavePart(o)
+	if not Saved.parts[o] then
+		Saved.parts[o]={
+			shadow=o.CastShadow,
+			material=o.Material
+		}
+	end
+end
+
+local function SaveParticle(o)
+	if not Saved.particles[o] then
+		Saved.particles[o]={
+			rate=o.Rate,
+			life=o.Lifetime
+		}
+	end
+end
+
+local function SaveTrail(o)
+	if Saved.trails[o]==nil then
+		Saved.trails[o]=o.Lifetime
+	end
+end
+
+local function SaveBeam(o)
+	if Saved.beams[o]==nil then
+		Saved.beams[o]=o.Segments
+	end
+end
+
+local function SaveSmoke(o)
+	if Saved.smoke[o]==nil then
+		Saved.smoke[o]=o.Opacity
+	end
+end
+
+local function SaveFire(o)
+	if not Saved.fire[o] then
+		Saved.fire[o]={
+			size=o.Size,
+			heat=o.Heat
+		}
+	end
+end
+
+local function SaveEffect(o)
+	if Saved.effects[o]==nil then
+		Saved.effects[o]=o.Enabled
+	end
+end
+
+local function ApplyGraphics(mode)
+	SaveLighting()
+	QUALITY=mode
+
+	local pm,lm,tm,bm,sm,fm,d,s
+
+	if mode=="MEDIUM" then
+		pm,lm,tm,bm,sm,fm,d,s=.7,.8,.2,4,.12,4,.7,.7
+	elseif mode=="HIGH" then
+		pm,lm,tm,bm,sm,fm,d,s=.5,.6,.1,2,.06,2,.4,.4
+	else
+		pm,lm,tm,bm,sm,fm,d,s=.3,.4,.05,1,.03,1,.2,.2
+	end
+
+	Lighting.GlobalShadows=false
+	Lighting.EnvironmentDiffuseScale=d
+	Lighting.EnvironmentSpecularScale=s
+
+	for _,o in ipairs(Workspace:GetDescendants()) do
+		if o:IsA("BasePart") then
+			SavePart(o)
+			o.CastShadow=false
+
+			if mode~="MEDIUM" then
+				o.Material=Enum.Material.SmoothPlastic
+			else
+				o.Material=Saved.parts[o].material
+			end
+
+		elseif o:IsA("ParticleEmitter") then
+			SaveParticle(o)
+
+			local v=Saved.particles[o]
+
+			o.Rate=v.rate*pm
+			o.Lifetime=NumberRange.new(
+				v.life.Min*lm,
+				v.life.Max*lm
+			)
+
+		elseif o:IsA("Trail") then
+			SaveTrail(o)
+			o.Lifetime=math.min(Saved.trails[o],tm)
+
+		elseif o:IsA("Beam") then
+			SaveBeam(o)
+			o.Segments=math.min(Saved.beams[o],bm)
+
+		elseif o:IsA("Smoke") then
+			SaveSmoke(o)
+			o.Opacity=math.min(Saved.smoke[o],sm)
+
+		elseif o:IsA("Fire") then
+			SaveFire(o)
+			o.Size=math.min(Saved.fire[o].size,fm)
+			o.Heat=math.min(
+				Saved.fire[o].heat,
+				mode=="MAX" and 1 or 5
+			)
+
+		elseif o:IsA("PostEffect") then
+			SaveEffect(o)
+
+			if mode~="MEDIUM" then
+				o.Enabled=false
+			end
+		end
+	end
+
+	for _,o in ipairs(Lighting:GetChildren()) do
+		if o:IsA("PostEffect") then
+			SaveEffect(o)
+
+			if mode~="MEDIUM" then
+				o.Enabled=false
+			end
+		end
+	end
+
+	UpdateUI()
+end
+
+local function RestoreGraphics()
+	if LightSaved then
+		Lighting.GlobalShadows=LightSaved.shadow
+		Lighting.EnvironmentDiffuseScale=LightSaved.diffuse
+		Lighting.EnvironmentSpecularScale=LightSaved.specular
+	end
+
+	for o,v in pairs(Saved.parts) do
+		if o.Parent then
+			o.CastShadow=v.shadow
+			o.Material=v.material
+		end
+	end
+
+	for o,v in pairs(Saved.particles) do
+		if o.Parent then
+			o.Rate=v.rate
+			o.Lifetime=v.life
+		end
+	end
+
+	for o,v in pairs(Saved.trails) do
+		if o.Parent then
+			o.Lifetime=v
+		end
+	end
+
+	for o,v in pairs(Saved.beams) do
+		if o.Parent then
+			o.Segments=v
+		end
+	end
+
+	for o,v in pairs(Saved.smoke) do
+		if o.Parent then
+			o.Opacity=v
+		end
+	end
+
+	for o,v in pairs(Saved.fire) do
+		if o.Parent then
+			o.Size=v.size
+			o.Heat=v.heat
+		end
+	end
+
+	for o,v in pairs(Saved.effects) do
+		if o.Parent then
+			o.Enabled=v
+		end
+	end
+end
+
+local function SetFixLag(state)
+	if Switching or FIXLAG==state then return end
+
+	Switching=true
+	FIXLAG=state
+
+	task.spawn(function()
+		if FIXLAG then
+			ApplyGraphics(QUALITY)
+		else
+			RestoreGraphics()
+			UpdateUI()
+		end
+
+		task.wait()
+		Switching=false
+	end)
+end
+
+LagBtn.Activated:Connect(function()
+	SetFixLag(not FIXLAG)
+end)
+
+MedBtn.Activated:Connect(function()
+	QUALITY="MEDIUM"
+
+	if FIXLAG then
+		ApplyGraphics("MEDIUM")
+	else
+		UpdateUI()
+	end
+end)
+
+HighBtn.Activated:Connect(function()
+	QUALITY="HIGH"
+
+	if FIXLAG then
+		ApplyGraphics("HIGH")
+	else
+		UpdateUI()
+	end
+end)
+
+MaxBtn.Activated:Connect(function()
+	QUALITY="MAX"
+
+	if FIXLAG then
+		ApplyGraphics("MAX")
+	else
+		UpdateUI()
+	end
+end)
+
+local function GetRoot(char)
+	if not char then return nil end
+
+	local hum=char:FindFirstChildOfClass("Humanoid")
+	local root=char:FindFirstChild("HumanoidRootPart")
+
+	if hum and root and hum.Health>0 then
+		return root
+	end
+end
+
+local function GetHead(char)
+	if not char then return nil end
+
+	local head=char:FindFirstChild("Head")
+
+	if head and head:IsA("BasePart") then
+		return head
+	end
+end
+
+local function FindNearest()
+	local me=GetRoot(LP.Character)
+	if not me then return nil end
+
+	local best=nil
+	local bestDist=AIM_RANGE
+
+	for _,p in ipairs(Players:GetPlayers()) do
+		if p~=LP then
+			local root=GetRoot(p.Character)
+
+			if root then
+				local d=(root.Position-me.Position).Magnitude
+
+				if d<=AIM_RANGE and d<bestDist then
+					bestDist=d
+					best=p
+				end
+			end
+		end
+	end
+
+	return best
+end
+
+local function AimAt(player)
+	local head=GetHead(player.Character)
+	local camera=Workspace.CurrentCamera
+
+	if not head or not camera then return end
+
+	local goal=CFrame.lookAt(
+		camera.CFrame.Position,
+		head.Position
+	)
+
+	camera.CFrame=camera.CFrame:Lerp(
+		goal,
+		AIM_SMOOTH
+	)
+end
+
+local function GetDistance(player)
+	if not player then return nil end
+
+	local a=GetRoot(LP.Character)
+	local b=GetRoot(player.Character)
+
+	if not a or not b then return nil end
+
+	return (b.Position-a.Position).Magnitude
+end
+
+local function GetHighlight(player)
+	if player==LP or not player.Character then
+		return nil
+	end
+
+	local h=player.Character:FindFirstChild("D_Hitbox")
+
+	if not h then
+		h=Instance.new("Highlight")
+		h.Name="D_Hitbox"
+		h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
+		h.Parent=player.Character
+	end
+
+	h.Adornee=player.Character
+
+	return h
+end
+
+local function UpdateHitbox(player)
+	if player==LP then return end
+
+	local root=GetRoot(player.Character)
+	local h=GetHighlight(player)
+
+	if not root or not h then return end
+
+	if not HITBOX then
+		h.Enabled=false
+		return
+	end
+
+	h.Enabled=true
+	h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
+	h.OutlineTransparency=0
+
+	if player==Target then
+		h.FillColor=Color3.fromRGB(150,0,0)
+		h.OutlineColor=Color3.fromRGB(255,30,30)
+		h.FillTransparency=.12
+	else
+		h.FillColor=Color3.fromRGB(0,80,25)
+		h.OutlineColor=Color3.fromRGB(30,255,75)
+		h.FillTransparency=.28
+	end
+end
+
+local function UpdateHitboxes()
+	local count=0
+
+	for _,p in ipairs(Players:GetPlayers()) do
+		if p~=LP then
+			if count<MAX_HITBOX then
+				UpdateHitbox(p)
+				count+=1
+			else
+				local c=p.Character
+				local h=c and c:FindFirstChild("D_Hitbox")
+
+				if h then
+					h.Enabled=false
+				end
+			end
+		end
+	end
+end
+
+local AimTimer=0
+local HitTimer=0
+local InfoTimer=0
+
+RunService.Heartbeat:Connect(function(dt)
+	AimTimer+=dt
+	HitTimer+=dt
+	InfoTimer+=dt
+
+	if AimTimer>=.016 then
+		AimTimer=0
+
+		if AIM then
+			Target=FindNearest()
+
+			if Target then
+				AimAt(Target)
+			end
+		else
+			Target=nil
+		end
+	end
+
+	if InfoTimer>=.05 then
+		InfoTimer=0
+
+		if Target then
+			local d=GetDistance(Target)
+
+			if d then
+				TargetText.Text=
+					"TARGET: "..Target.Name..
+					" | "..math.floor(d).." STUDS"
+			else
+				TargetText.Text="TARGET: NONE | 0 STUDS"
+			end
+		else
+			TargetText.Text="TARGET: NONE | 0 STUDS"
+		end
+	end
+
+	if HitTimer>=.2 then
+		HitTimer=0
+		UpdateHitboxes()
+	end
+end)
+
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function()
+		task.wait(.2)
+		UpdateHitbox(player)
+	end)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+	if Target==player then
+		Target=nil
+	end
+end)
+
+LP.CharacterAdded:Connect(function()
+	Target=nil
+end)
+
+FIXLAG=false
+QUALITY="MEDIUM"
+UpdateUI()
