@@ -14,9 +14,8 @@ local QUALITY="MEDIUM"
 
 local AIM_RANGE=500
 local MAX_HITBOX=300
-local AIM_SMOOTH=1
-
 local Target=nil
+local TargetLocked=false
 
 local GUI=Instance.new("ScreenGui")
 GUI.Name="DSystem"
@@ -40,7 +39,7 @@ dc.CornerRadius=UDim.new(0,7)
 dc.Parent=D
 
 local Menu=Instance.new("Frame")
-Menu.Size=UDim2.fromOffset(300,150)
+Menu.Size=UDim2.fromOffset(300,260)
 Menu.Position=UDim2.new(.5,-150,.68,38)
 Menu.BackgroundColor3=Color3.fromRGB(3,3,3)
 Menu.BorderSizePixel=0
@@ -91,9 +90,39 @@ QualityLabel.TextSize=9
 QualityLabel.Font=Enum.Font.GothamBold
 QualityLabel.Parent=Menu
 
+local PlayerTitle=Instance.new("TextLabel")
+PlayerTitle.Size=UDim2.fromOffset(285,20)
+PlayerTitle.Position=UDim2.fromOffset(8,119)
+PlayerTitle.BackgroundTransparency=1
+PlayerTitle.Text="SELECT TARGET"
+PlayerTitle.TextColor3=Color3.fromRGB(190,190,190)
+PlayerTitle.TextSize=9
+PlayerTitle.Font=Enum.Font.GothamBold
+PlayerTitle.TextXAlignment=Enum.TextXAlignment.Left
+PlayerTitle.Parent=Menu
+
+local PlayerList=Instance.new("ScrollingFrame")
+PlayerList.Name="PlayerList"
+PlayerList.Size=UDim2.fromOffset(285,105)
+PlayerList.Position=UDim2.fromOffset(8,141)
+PlayerList.BackgroundColor3=Color3.fromRGB(10,10,10)
+PlayerList.BorderSizePixel=0
+PlayerList.ScrollBarThickness=3
+PlayerList.CanvasSize=UDim2.fromOffset(0,0)
+PlayerList.Parent=Menu
+
+local plc=Instance.new("UICorner")
+plc.CornerRadius=UDim.new(0,6)
+plc.Parent=PlayerList
+
+local layout=Instance.new("UIListLayout")
+layout.Padding=UDim.new(0,2)
+layout.SortOrder=Enum.SortOrder.Name
+layout.Parent=PlayerList
+
 local TargetBox=Instance.new("Frame")
-TargetBox.Size=UDim2.fromOffset(170,36)
-TargetBox.Position=UDim2.new(.5,-85,0,12)
+TargetBox.Size=UDim2.fromOffset(190,38)
+TargetBox.Position=UDim2.new(.5,-95,0,10)
 TargetBox.BackgroundColor3=Color3.fromRGB(5,5,5)
 TargetBox.BorderSizePixel=0
 TargetBox.Active=true
@@ -110,10 +139,10 @@ tbs.Parent=TargetBox
 local TargetText=Instance.new("TextLabel")
 TargetText.Size=UDim2.fromScale(1,1)
 TargetText.BackgroundTransparency=1
-TargetText.Text="TARGET: NONE | 0 STUDS"
+TargetText.Text="TARGET: NONE"
 TargetText.TextColor3=Color3.new(1,1,1)
 TargetText.TextStrokeTransparency=.25
-TargetText.TextSize=10
+TargetText.TextSize=9
 TargetText.Font=Enum.Font.GothamBold
 TargetText.Parent=TargetBox
 
@@ -122,40 +151,101 @@ local function UpdateUI()
 	HitBtn.Text=HITBOX and "HITBOX\nON" or "HITBOX\nOFF"
 	LagBtn.Text=FIXLAG and "FIX LAG\nON" or "FIX LAG\nOFF"
 
-	AimBtn.BackgroundColor3=AIM
-		and Color3.fromRGB(35,35,35)
-		or Color3.fromRGB(18,18,18)
+	AimBtn.BackgroundColor3=AIM and Color3.fromRGB(35,35,35) or Color3.fromRGB(18,18,18)
+	HitBtn.BackgroundColor3=HITBOX and Color3.fromRGB(35,35,35) or Color3.fromRGB(18,18,18)
+	LagBtn.BackgroundColor3=FIXLAG and Color3.fromRGB(35,35,35) or Color3.fromRGB(18,18,18)
 
-	HitBtn.BackgroundColor3=HITBOX
-		and Color3.fromRGB(35,35,35)
-		or Color3.fromRGB(18,18,18)
-
-	LagBtn.BackgroundColor3=FIXLAG
-		and Color3.fromRGB(35,35,35)
-		or Color3.fromRGB(18,18,18)
-
-	MedBtn.BackgroundColor3=QUALITY=="MEDIUM"
-		and Color3.fromRGB(45,45,45)
-		or Color3.fromRGB(18,18,18)
-
-	HighBtn.BackgroundColor3=QUALITY=="HIGH"
-		and Color3.fromRGB(45,45,45)
-		or Color3.fromRGB(18,18,18)
-
-	MaxBtn.BackgroundColor3=QUALITY=="MAX"
-		and Color3.fromRGB(45,45,45)
-		or Color3.fromRGB(18,18,18)
+	MedBtn.BackgroundColor3=QUALITY=="MEDIUM" and Color3.fromRGB(45,45,45) or Color3.fromRGB(18,18,18)
+	HighBtn.BackgroundColor3=QUALITY=="HIGH" and Color3.fromRGB(45,45,45) or Color3.fromRGB(18,18,18)
+	MaxBtn.BackgroundColor3=QUALITY=="MAX" and Color3.fromRGB(45,45,45) or Color3.fromRGB(18,18,18)
 
 	QualityLabel.Text="GRAPHICS: "..QUALITY
 end
 
+local function UpdatePlayerList()
+	for _,v in ipairs(PlayerList:GetChildren()) do
+		if v:IsA("TextButton") then
+			v:Destroy()
+		end
+	end
+
+	local list={}
+
+	for _,player in ipairs(Players:GetPlayers()) do
+		if player~=LP then
+			table.insert(list,player)
+		end
+	end
+
+	table.sort(list,function(a,b)
+		local an=a.DisplayName:lower()
+		local bn=b.DisplayName:lower()
+
+		if an==bn then
+			return a.Name:lower()<b.Name:lower()
+		end
+
+		return an<bn
+	end)
+
+	for _,player in ipairs(list) do
+		local b=Instance.new("TextButton")
+		b.Name="Player_"..player.UserId
+		b.Size=UDim2.new(1,-4,0,32)
+		b.BackgroundColor3=Color3.fromRGB(18,18,18)
+		b.TextColor3=Color3.new(1,1,1)
+		b.TextSize=9
+		b.Font=Enum.Font.GothamBold
+		b.TextXAlignment=Enum.TextXAlignment.Left
+		b.Text=(Target==player and TargetLocked and "● " or "  ")..player.DisplayName.."  @"..player.Name
+		b.AutoButtonColor=true
+		b.Parent=PlayerList
+
+		local c=Instance.new("UICorner")
+		c.CornerRadius=UDim.new(0,5)
+		c.Parent=b
+
+		if Target==player and TargetLocked then
+			b.BackgroundColor3=Color3.fromRGB(70,25,25)
+		end
+
+		b.Activated:Connect(function()
+			if Target==player and TargetLocked then
+				Target=nil
+				TargetLocked=false
+			else
+				Target=player
+				TargetLocked=true
+			end
+
+			UpdatePlayerList()
+		end)
+	end
+
+	PlayerList.CanvasSize=UDim2.fromOffset(0,layout.AbsoluteContentSize.Y+4)
+end
+
+layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	PlayerList.CanvasSize=UDim2.fromOffset(0,layout.AbsoluteContentSize.Y+4)
+end)
+
 D.Activated:Connect(function()
 	Menu.Visible=not Menu.Visible
+
+	if Menu.Visible then
+		UpdatePlayerList()
+	end
 end)
 
 AimBtn.Activated:Connect(function()
 	AIM=not AIM
-	if not AIM then Target=nil end
+
+	if not AIM then
+		Target=nil
+		TargetLocked=false
+		UpdatePlayerList()
+	end
+
 	UpdateUI()
 end)
 
@@ -353,7 +443,6 @@ local function ApplyGraphics(mode)
 			else
 				o.Material=Saved.parts[o].material
 			end
-
 		elseif o:IsA("ParticleEmitter") then
 			SaveParticle(o)
 
@@ -364,19 +453,15 @@ local function ApplyGraphics(mode)
 				v.life.Min*lm,
 				v.life.Max*lm
 			)
-
 		elseif o:IsA("Trail") then
 			SaveTrail(o)
 			o.Lifetime=math.min(Saved.trails[o],tm)
-
 		elseif o:IsA("Beam") then
 			SaveBeam(o)
 			o.Segments=math.min(Saved.beams[o],bm)
-
 		elseif o:IsA("Smoke") then
 			SaveSmoke(o)
 			o.Opacity=math.min(Saved.smoke[o],sm)
-
 		elseif o:IsA("Fire") then
 			SaveFire(o)
 			o.Size=math.min(Saved.fire[o].size,fm)
@@ -384,7 +469,6 @@ local function ApplyGraphics(mode)
 				Saved.fire[o].heat,
 				mode=="MAX" and 1 or 5
 			)
-
 		elseif o:IsA("PostEffect") then
 			SaveEffect(o)
 
@@ -534,6 +618,14 @@ local function GetHead(char)
 	end
 end
 
+local function IsValidTarget(player)
+	if not player or player==LP then
+		return false
+	end
+
+	return GetRoot(player.Character)~=nil
+end
+
 local function FindNearest()
 	local me=GetRoot(LP.Character)
 	if not me then return nil end
@@ -559,20 +651,15 @@ local function FindNearest()
 	return best
 end
 
-local function AimAt(player)
+local function HardAim(player)
 	local head=GetHead(player.Character)
 	local camera=Workspace.CurrentCamera
 
 	if not head or not camera then return end
 
-	local goal=CFrame.lookAt(
+	camera.CFrame=CFrame.lookAt(
 		camera.CFrame.Position,
 		head.Position
-	)
-
-	camera.CFrame=camera.CFrame:Lerp(
-		goal,
-		AIM_SMOOTH
 	)
 end
 
@@ -654,44 +741,50 @@ local function UpdateHitboxes()
 	end
 end
 
-local AimTimer=0
+RunService.RenderStepped:Connect(function()
+	if not AIM then return end
+
+	if TargetLocked then
+		if IsValidTarget(Target) then
+			HardAim(Target)
+		else
+			Target=nil
+			TargetLocked=false
+			UpdatePlayerList()
+		end
+	else
+		Target=FindNearest()
+
+		if Target then
+			HardAim(Target)
+		end
+	end
+end)
+
 local HitTimer=0
 local InfoTimer=0
 
 RunService.Heartbeat:Connect(function(dt)
-	AimTimer+=dt
 	HitTimer+=dt
 	InfoTimer+=dt
-
-	if AimTimer>=.016 then
-		AimTimer=0
-
-		if AIM then
-			Target=FindNearest()
-
-			if Target then
-				AimAt(Target)
-			end
-		else
-			Target=nil
-		end
-	end
 
 	if InfoTimer>=.05 then
 		InfoTimer=0
 
-		if Target then
+		if Target and IsValidTarget(Target) then
 			local d=GetDistance(Target)
 
 			if d then
+				local lockText=TargetLocked and " [PIN]" or ""
+
 				TargetText.Text=
-					"TARGET: "..Target.Name..
+					"TARGET: "..Target.DisplayName..
+					" | @"..Target.Name..
+					lockText..
 					" | "..math.floor(d).." STUDS"
-			else
-				TargetText.Text="TARGET: NONE | 0 STUDS"
 			end
 		else
-			TargetText.Text="TARGET: NONE | 0 STUDS"
+			TargetText.Text="TARGET: NONE"
 		end
 	end
 
@@ -705,19 +798,26 @@ Players.PlayerAdded:Connect(function(player)
 	player.CharacterAdded:Connect(function()
 		task.wait(.2)
 		UpdateHitbox(player)
+		UpdatePlayerList()
 	end)
+
+	UpdatePlayerList()
 end)
 
 Players.PlayerRemoving:Connect(function(player)
 	if Target==player then
 		Target=nil
+		TargetLocked=false
 	end
+
+	UpdatePlayerList()
 end)
 
 LP.CharacterAdded:Connect(function()
 	Target=nil
+	TargetLocked=false
+	UpdatePlayerList()
 end)
 
-FIXLAG=false
-QUALITY="MEDIUM"
+UpdatePlayerList()
 UpdateUI()
